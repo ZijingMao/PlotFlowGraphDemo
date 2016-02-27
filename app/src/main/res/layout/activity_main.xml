@@ -7,6 +7,23 @@
     android:fitsSystemWindows="true"
     tools:context="com.example.zijing.plotflowgraphdemo.MainActivity">
 
-    <include layout="@layout/xy_plot_chart" />
+    <LinearLayout
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        style="@style/sample_activity"
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center">
+        <include layout="@layout/xy_plot_chart"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:layout_width="fill_parent" />
+
+        <include layout="@layout/xy_hist_chart"
+            android:layout_weight="2"
+            android:layout_height="wrap_content"
+            android:layout_width="fill_parent" />
+    </LinearLayout>
+
 
 </android.support.design.widget.CoordinatorLayout>

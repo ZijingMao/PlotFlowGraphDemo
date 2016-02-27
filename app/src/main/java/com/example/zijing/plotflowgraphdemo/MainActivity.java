@@ -10,6 +10,7 @@ import android.view.MenuItem;
 
 import com.androidplot.Plot;
 import com.androidplot.util.PixelUtils;
+import com.androidplot.xy.BarFormatter;
 import com.androidplot.xy.BoundaryMode;
 import com.androidplot.xy.LineAndPointFormatter;
 import com.androidplot.xy.PointLabelFormatter;
@@ -27,13 +28,19 @@ import java.util.Random;
 
 public class MainActivity extends AppCompatActivity {
 
-    private XYPlot dynamicPlot;
-    private MyPlotUpdater plotUpdater;
-    private SampleDynamicSeries[] sampleDynamicSeries;
-    private SampleDynamicXYDatasource data;
-    private Thread myThread;
+    private XYPlot dynamicPlot, histPlot;
+    private MyPlotUpdater plotUpdater, plotUpdaterHist;
 
-    private int channelSize = 4;
+    private SampleDynamicSeries[] sampleDynamicSeries;
+    private SampleHistSeries[] sampleHistogramSeries;
+
+    private SampleDynamicXYDatasource data;
+    private SampleHistXYDatasource dataPower;
+
+    private Thread myThread, histThread;
+
+    public static int channelSize = 12;
+    public static int powerBandSize = 5;
 
     // redraws a dynamicPlot whenever an update is received:
     private class MyPlotUpdater implements Observer {
@@ -54,22 +61,28 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        dynamicPlot = (XYPlot) findViewById(R.id.xyPlot);
-
         // get handles to our View defined in layout.xml:
         dynamicPlot = (XYPlot) findViewById(R.id.xyPlot);
+        histPlot = (XYPlot) findViewById(R.id.histplot);
 
         plotUpdater = new MyPlotUpdater(dynamicPlot);
+        plotUpdaterHist = new MyPlotUpdater(histPlot);
 
         // only display whole numbers in domain labels
-        dynamicPlot.getGraphWidget().setDomainValueFormat(new DecimalFormat("0"));
+        dynamicPlot.getGraphWidget().setDomainValueFormat(new DecimalFormat("#"));
+        histPlot.getGraphWidget().setDomainValueFormat(new DecimalFormat("#"));
 
         // getInstance and position datasets:
         data = new SampleDynamicXYDatasource();
+        dataPower = new SampleHistXYDatasource();
 
         // three color here
         int powIdx = (int) Math.ceil(Math.pow(channelSize, 1.0/3));
+        int powHistIdx = (int) Math.ceil(Math.pow(powerBandSize, 1.0/3));
         sampleDynamicSeries = new SampleDynamicSeries[channelSize];
+        sampleHistogramSeries = new SampleHistSeries[powerBandSize];
+
+        // implement the sample dynamics for eeg signals
         for (int chanIdx = 0; chanIdx < channelSize; chanIdx++) {
             sampleDynamicSeries[chanIdx] = new SampleDynamicSeries(data,
                     chanIdx, "Sine "+chanIdx);
@@ -77,12 +90,41 @@ public class MainActivity extends AppCompatActivity {
             LineAndPointFormatter formatter1 = new LineAndPointFormatter(
                     Color.rgb(rgbColor[0], rgbColor[1], rgbColor[2]), null, null, null);
             formatter1.getLinePaint().setStrokeJoin(Paint.Join.ROUND);
-            formatter1.getLinePaint().setStrokeWidth(10);
+            formatter1.getLinePaint().setStrokeWidth(3);
             dynamicPlot.addSeries(sampleDynamicSeries[chanIdx], formatter1);
         }
 
+        // implement the histogram for power band
+        for (int powerIdx = 0; powerIdx < powerBandSize; powerIdx++) {
+            sampleHistogramSeries[powerIdx] = new SampleHistSeries(dataPower,
+                    powerIdx, "Sine "+powerIdx);
+            int[] rgbColor = setRGBColor(powerIdx, powHistIdx);
+            BarFormatter formatter1 = new BarFormatter(
+                    Color.rgb(rgbColor[0], rgbColor[1], rgbColor[2]),
+                    Color.rgb(rgbColor[0], rgbColor[1], rgbColor[2]));
+
+            histPlot.addSeries(sampleHistogramSeries[powerIdx], formatter1);
+        }
+
+        histPlot.setDomainStepValue(3);
+        histPlot.setTicksPerRangeLabel(3);
+        // per the android documentation, the minimum and maximum readings we can get from
+        // any of the orientation sensors is -180 and 359 respectively so we will fix our plot's
+        // boundaries to those values.  If we did not do this, the plot would auto-range which
+        // can be visually confusing in the case of dynamic plots.
+        histPlot.setRangeBoundaries(-180, 359, BoundaryMode.FIXED);
+
+        // update our domain and range axis labels:
+        histPlot.setDomainLabel("");
+        histPlot.getDomainLabelWidget().pack();
+        histPlot.setRangeLabel("Angle (Degs)");
+        histPlot.getRangeLabelWidget().pack();
+        histPlot.setGridPadding(15, 0, 15, 0);
+        histPlot.setRangeValueFormat(new DecimalFormat("#"));
+
         // hook up the plotUpdater to the data model:
         data.addObserver(plotUpdater);
+        dataPower.addObserver(plotUpdaterHist);
 
         // thin out domain tick labels so they dont overlap each other:
         dynamicPlot.setDomainStepMode(XYStepMode.INCREMENT_BY_VAL);
@@ -124,6 +166,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
      protected void onPause() {
         data.stopThread();
+        dataPower.stopThread();
         super.onPause();
     }
 
@@ -131,7 +174,9 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         // kick off the data generating thread:
         myThread = new Thread(data);
+        histThread = new Thread(dataPower);
         myThread.start();
+        histThread.start();
         super.onResume();
     }
 

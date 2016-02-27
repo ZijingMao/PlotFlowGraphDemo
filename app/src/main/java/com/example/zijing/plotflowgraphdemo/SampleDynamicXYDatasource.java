@@ -31,8 +31,10 @@ public class SampleDynamicXYDatasource implements Runnable {
     private static final int SAMPLE_SIZE = 100;
     private int phase = 0;
     private int sinAmp = 1;
-    int [] currentData = new int[4];
-    int [][] dataChunk = new int[4][SAMPLE_SIZE];
+    private int channelSize = MainActivity.channelSize;
+    int [] currentData = new int[channelSize];
+    int [][] dataChunk = new int[channelSize][SAMPLE_SIZE];
+    int stepSize = 200/channelSize;
     private MyObservable notifier;
     private boolean keepRunning = false;
     private Random rand = new Random();
@@ -53,11 +55,12 @@ public class SampleDynamicXYDatasource implements Runnable {
             while (keepRunning) {
 
                 Thread.sleep(100); // decrease or remove to speed up the refresh rate.
-                for (int chanIdx = 0; chanIdx < 4; chanIdx++){
+                for (int chanIdx = 0; chanIdx < channelSize; chanIdx++){
                     for (int timeIdx = 0; timeIdx < SAMPLE_SIZE-1; timeIdx++){
                         dataChunk[chanIdx][timeIdx] = dataChunk[chanIdx][timeIdx+1];
                     }
-                    dataChunk[chanIdx][SAMPLE_SIZE-1] = rand.nextInt(10) + chanIdx*50 - 100;
+                    dataChunk[chanIdx][SAMPLE_SIZE-1] =
+                            rand.nextInt(10) + chanIdx*stepSize - 100;
                 }
 
                 notifier.notifyObservers();
@@ -83,7 +86,7 @@ public class SampleDynamicXYDatasource implements Runnable {
             throw new IllegalArgumentException();
         }
 
-        if (series < 4) {
+        if (series < channelSize) {
             return dataChunk[series][index];
         }else{
             throw new IllegalArgumentException();
