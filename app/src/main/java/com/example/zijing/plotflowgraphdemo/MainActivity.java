@@ -5,21 +5,27 @@ import android.graphics.DashPathEffect;
 import android.graphics.Paint;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 
 import com.androidplot.Plot;
 import com.androidplot.util.PixelUtils;
 import com.androidplot.xy.BarFormatter;
+import com.androidplot.xy.BarRenderer;
 import com.androidplot.xy.BoundaryMode;
 import com.androidplot.xy.LineAndPointFormatter;
-import com.androidplot.xy.PointLabelFormatter;
-import com.androidplot.xy.SimpleXYSeries;
 import com.androidplot.xy.XYPlot;
 import com.androidplot.xy.XYSeries;
+import com.androidplot.xy.XYSeriesRenderer;
 import com.androidplot.xy.XYStepMode;
 
+import java.text.DateFormatSymbols;
 import java.text.DecimalFormat;
+import java.text.FieldPosition;
+import java.text.Format;
+import java.text.NumberFormat;
+import java.text.ParsePosition;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Observable;
@@ -41,6 +47,8 @@ public class MainActivity extends AppCompatActivity {
 
     public static int channelSize = 12;
     public static int powerBandSize = 5;
+
+    public static String[] powerbandName = {"", "Delta", "Theta", "Alpha", "Beta", "Gamma" , ""};
 
     // redraws a dynamicPlot whenever an update is received:
     private class MyPlotUpdater implements Observer {
@@ -85,7 +93,7 @@ public class MainActivity extends AppCompatActivity {
         // implement the sample dynamics for eeg signals
         for (int chanIdx = 0; chanIdx < channelSize; chanIdx++) {
             sampleDynamicSeries[chanIdx] = new SampleDynamicSeries(data,
-                    chanIdx, "Sine "+chanIdx);
+                    chanIdx, ""+chanIdx);
             int[] rgbColor = setRGBColor(chanIdx, powIdx);
             LineAndPointFormatter formatter1 = new LineAndPointFormatter(
                     Color.rgb(rgbColor[0], rgbColor[1], rgbColor[2]), null, null, null);
@@ -97,30 +105,55 @@ public class MainActivity extends AppCompatActivity {
         // implement the histogram for power band
         for (int powerIdx = 0; powerIdx < powerBandSize; powerIdx++) {
             sampleHistogramSeries[powerIdx] = new SampleHistSeries(dataPower,
-                    powerIdx, "Sine "+powerIdx);
+                    powerIdx, ""+powerIdx);
             int[] rgbColor = setRGBColor(powerIdx, powHistIdx);
-            BarFormatter formatter1 = new BarFormatter(
-                    Color.rgb(rgbColor[0], rgbColor[1], rgbColor[2]),
-                    Color.rgb(rgbColor[0], rgbColor[1], rgbColor[2]));
+            MyBarFormatter formatter1 = new MyBarFormatter(
+                    Color.argb(200, rgbColor[0], rgbColor[1], rgbColor[2]),
+                    Color.argb(200, rgbColor[0], rgbColor[1], rgbColor[2]));
 
             histPlot.addSeries(sampleHistogramSeries[powerIdx], formatter1);
         }
 
-        histPlot.setDomainStepValue(3);
+        histPlot.setDomainStepValue(powerbandName.length);
         histPlot.setTicksPerRangeLabel(3);
+        histPlot.setTicksPerDomainLabel(1);
         // per the android documentation, the minimum and maximum readings we can get from
         // any of the orientation sensors is -180 and 359 respectively so we will fix our plot's
         // boundaries to those values.  If we did not do this, the plot would auto-range which
         // can be visually confusing in the case of dynamic plots.
         histPlot.setRangeBoundaries(-180, 359, BoundaryMode.FIXED);
+        histPlot.setDomainBoundaries(-1, 5, BoundaryMode.FIXED);
 
         // update our domain and range axis labels:
-        histPlot.setDomainLabel("");
+        histPlot.setDomainLabel("Frequency Band");
         histPlot.getDomainLabelWidget().pack();
-        histPlot.setRangeLabel("Angle (Degs)");
+        histPlot.setRangeLabel("Power Level (dB)");
         histPlot.getRangeLabelWidget().pack();
-        histPlot.setGridPadding(15, 0, 15, 0);
+        histPlot.setGridPadding(15, 10, 15, 0);
         histPlot.setRangeValueFormat(new DecimalFormat("#"));
+
+        histPlot.setDomainValueFormat(new Format() {
+            @Override
+            public StringBuffer format(Object object, StringBuffer buffer, FieldPosition field) {
+                int parsedInt = Math.round(Float.parseFloat(object.toString())) + 1;
+                String labelString = powerbandName[parsedInt];
+                buffer.append(labelString);
+                return buffer;
+            }
+
+            @Override
+            public Object parseObject(String string, ParsePosition position) {
+                return java.util.Arrays.asList(powerbandName).indexOf(string);
+            }
+        });
+
+        // cast to my render bar style
+        MyBarRenderer renderer = (MyBarRenderer) histPlot.getRenderer(MyBarRenderer.class);
+        // set render style as default
+        // renderer.setBarRenderStyle((BarRenderer.BarRenderStyle)spRenderStyle.getSelectedItem());
+        renderer.setBarWidthStyle(BarRenderer.BarWidthStyle.FIXED_WIDTH);
+        // set render width as desired in the future
+        renderer.setBarWidth((float) 50);
 
         // hook up the plotUpdater to the data model:
         data.addObserver(plotUpdater);
@@ -131,7 +164,7 @@ public class MainActivity extends AppCompatActivity {
         dynamicPlot.setDomainStepValue(5);
 
         dynamicPlot.setRangeStepMode(XYStepMode.INCREMENT_BY_VAL);
-        dynamicPlot.setRangeStepValue(10);
+        dynamicPlot.setRangeStepValue(channelSize);
 
         dynamicPlot.setRangeValueFormat(new DecimalFormat("###.#"));
 
