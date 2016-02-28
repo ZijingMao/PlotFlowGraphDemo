@@ -58,7 +58,9 @@ public class SampleDynamicXYDatasource implements Runnable {
                         dataChunk[chanIdx][timeIdx] = dataChunk[chanIdx][timeIdx+1];
                     }
                     dataChunk[chanIdx][SAMPLE_SIZE-1] =
-                            rand.nextInt(separateChannelsRange) + chanIdx*separateChannelsRange;
+                            rand.nextInt(separateChannelsRange) +
+                                    chanIdx*separateChannelsRange -
+                                    separateChannelsRange/2;
                 }
 
                 notifier.notifyObservers();

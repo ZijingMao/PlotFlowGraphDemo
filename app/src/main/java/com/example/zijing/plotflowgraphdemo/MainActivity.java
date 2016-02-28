@@ -50,7 +50,7 @@ public class MainActivity extends AppCompatActivity {
     public static int separateChannelsRange = 10000;
 
     public static String[] powerbandName = {"", "Delta", "Theta", "Alpha", "Beta", "Gamma" , ""};
-    public static String[] channelName = {"", "F7", "Fp1", "Fp2", "F8", "Fz", "C3", "Cz", "C4", "Pz", "O1", "Oz", "O2", ""};
+    public static String[] channelName = {"", "O2", "Oz", "O1", "Pz", "C4", "Cz", "C3", "Fz", "F8", "Fp2", "Fp1", "F7", ""};
 
     // redraws a dynamicPlot whenever an update is received:
     private class MyPlotUpdater implements Observer {
@@ -163,7 +163,7 @@ public class MainActivity extends AppCompatActivity {
 
         // thin out domain tick labels so they dont overlap each other:
         dynamicPlot.setDomainStepMode(XYStepMode.INCREMENT_BY_VAL);
-        dynamicPlot.setDomainStepValue(5);
+        dynamicPlot.setDomainStepValue(10);
 
         dynamicPlot.setRangeStepValue(channelSize + 2);
         dynamicPlot.setTicksPerRangeLabel(1);
