@@ -6,6 +6,8 @@ import android.content.Context;
 import android.util.Log;
 import android.widget.Toast;
 
+import java.util.Random;
+
 /**
  * An {@link IntentService} subclass for handling asynchronous task requests in
  * a service on a separate handler thread.
@@ -15,7 +17,7 @@ import android.widget.Toast;
  */
 public class DataProcessIntentService extends IntentService {
     private final static String TAG = "IntentService";
-    public final static int SAMPLE_SIZE = 256;
+    public final static int SAMPLE_SIZE = 100;
 
     // TODO: Rename actions, choose action names that describe tasks that this
     // IntentService can perform, e.g. ACTION_FETCH_NEW_ITEMS
@@ -34,6 +36,10 @@ public class DataProcessIntentService extends IntentService {
     public static int sampleRate = 256;
     private static int bufferLengthInSamples = SAMPLE_SIZE;
     public static int bufferLengthInSeconds = bufferLengthInSamples/sampleRate;
+
+    private int separateChannelsRange = MainActivity.separateChannelsRange;
+    private int channelSize = MainActivity.channelSize;
+    private Random rand = new Random();
 
     public DataProcessIntentService() {
         super("DataProcessIntentService");
@@ -102,11 +108,18 @@ public class DataProcessIntentService extends IntentService {
         Log.d(TAG, "Service on start now ...");
         Intent dataBroadcastIntent = new Intent(EXTRA_RESULT);
         while(backgroundServiceRunning) {
-            double[] sample = new double[4];
+            try {
+                Thread.sleep(50);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            double[] sample = new double[12];
             sample_length = sample.length;
             String curr_sample = "";
             for(int idx=0; idx<sample_length; idx++) {
-                curr_sample += sample[idx];
+                curr_sample += rand.nextInt(separateChannelsRange) +
+                        idx*separateChannelsRange -
+                        separateChannelsRange/2;
                 curr_sample += "\n";
             }
             // remove the last comma

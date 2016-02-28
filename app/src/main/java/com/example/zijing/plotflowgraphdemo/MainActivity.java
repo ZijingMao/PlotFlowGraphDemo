@@ -1,5 +1,9 @@
 package com.example.zijing.plotflowgraphdemo;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.graphics.Color;
 import android.graphics.DashPathEffect;
 import android.graphics.Paint;
@@ -35,7 +39,7 @@ import java.util.Random;
 public class MainActivity extends AppCompatActivity {
 
     private XYPlot dynamicPlot, histPlot;
-    private MyPlotUpdater plotUpdater, plotUpdaterHist;
+    private MyPlotUpdater plotUpdaterHist;
 
     private SampleDynamicSeries[] sampleDynamicSeries;
     private SampleHistSeries[] sampleHistogramSeries;
@@ -43,7 +47,10 @@ public class MainActivity extends AppCompatActivity {
     private SampleDynamicXYDatasource data;
     private SampleHistXYDatasource dataPower;
 
-    private Thread myThread, histThread;
+    private Thread histThread;
+    private Intent dataStreamIntent;
+
+    private BroadcastReceiver receiver;
 
     public static int channelSize = 12;
     public static int powerBandSize = 5;
@@ -71,11 +78,18 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        receiver = new BroadcastReceiver(){
+
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                updateUI(intent);
+            }
+        };
+
         // get handles to our View defined in layout.xml:
         dynamicPlot = (XYPlot) findViewById(R.id.xyPlot);
         histPlot = (XYPlot) findViewById(R.id.histplot);
 
-        plotUpdater = new MyPlotUpdater(dynamicPlot);
         plotUpdaterHist = new MyPlotUpdater(histPlot);
 
         // only display whole numbers in domain labels
@@ -158,12 +172,11 @@ public class MainActivity extends AppCompatActivity {
         renderer.setBarWidth((float) 50);
 
         // hook up the plotUpdater to the data model:
-        data.addObserver(plotUpdater);
         dataPower.addObserver(plotUpdaterHist);
 
         // thin out domain tick labels so they dont overlap each other:
         dynamicPlot.setDomainStepMode(XYStepMode.INCREMENT_BY_VAL);
-        dynamicPlot.setDomainStepValue(10);
+        dynamicPlot.setDomainStepValue(20);
 
         dynamicPlot.setRangeStepValue(channelSize + 2);
         dynamicPlot.setTicksPerRangeLabel(1);
@@ -199,6 +212,11 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    private void updateUI(Intent intent) {
+        data.updateDataStream(intent);
+        dynamicPlot.redraw();
+    }
+
     private int[] setRGBColor(int chanIdx, int powIdx) {
 
         int colorStep = (int) Math.floor(255/powIdx);
@@ -218,7 +236,10 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
      protected void onPause() {
-        data.stopThread();
+
+        DataProcessIntentService.backgroundServiceRunning = false;
+        unregisterReceiver(receiver);
+
         dataPower.stopThread();
         super.onPause();
     }
@@ -226,9 +247,15 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         // kick off the data generating thread:
-        myThread = new Thread(data);
+
+        DataProcessIntentService.startActionSendData(
+                MainActivity.this, "EEG", "Cog");
+
+        registerReceiver(receiver,
+                new IntentFilter(DataProcessIntentService.EXTRA_RESULT));
+
         histThread = new Thread(dataPower);
-        myThread.start();
+
         histThread.start();
         super.onResume();
     }
