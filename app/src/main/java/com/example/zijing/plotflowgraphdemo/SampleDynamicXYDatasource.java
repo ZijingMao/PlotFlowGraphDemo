@@ -30,11 +30,9 @@ public class SampleDynamicXYDatasource implements Runnable {
     public static final int SINE2 = 1;
     private static final int SAMPLE_SIZE = 100;
     private int phase = 0;
-    private int sinAmp = 1;
+    private int separateChannelsRange = MainActivity.separateChannelsRange;
     private int channelSize = MainActivity.channelSize;
-    int [] currentData = new int[channelSize];
     int [][] dataChunk = new int[channelSize][SAMPLE_SIZE];
-    int stepSize = 200/channelSize;
     private MyObservable notifier;
     private boolean keepRunning = false;
     private Random rand = new Random();
@@ -60,7 +58,7 @@ public class SampleDynamicXYDatasource implements Runnable {
                         dataChunk[chanIdx][timeIdx] = dataChunk[chanIdx][timeIdx+1];
                     }
                     dataChunk[chanIdx][SAMPLE_SIZE-1] =
-                            rand.nextInt(10) + chanIdx*stepSize - 100;
+                            rand.nextInt(separateChannelsRange) + chanIdx*separateChannelsRange;
                 }
 
                 notifier.notifyObservers();

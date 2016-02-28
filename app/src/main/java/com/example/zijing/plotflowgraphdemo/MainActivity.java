@@ -47,8 +47,10 @@ public class MainActivity extends AppCompatActivity {
 
     public static int channelSize = 12;
     public static int powerBandSize = 5;
+    public static int separateChannelsRange = 10000;
 
     public static String[] powerbandName = {"", "Delta", "Theta", "Alpha", "Beta", "Gamma" , ""};
+    public static String[] channelName = {"", "F7", "Fp1", "Fp2", "F8", "Fz", "C3", "Cz", "C4", "Pz", "O1", "Oz", "O2", ""};
 
     // redraws a dynamicPlot whenever an update is received:
     private class MyPlotUpdater implements Observer {
@@ -128,7 +130,7 @@ public class MainActivity extends AppCompatActivity {
         histPlot.setDomainLabel("Frequency Band");
         histPlot.getDomainLabelWidget().pack();
         histPlot.setRangeLabel("Power Level (dB)");
-        histPlot.getRangeLabelWidget().pack();
+        // histPlot.getRangeLabelWidget().pack();
         histPlot.setGridPadding(15, 10, 15, 0);
         histPlot.setRangeValueFormat(new DecimalFormat("#"));
 
@@ -163,19 +165,37 @@ public class MainActivity extends AppCompatActivity {
         dynamicPlot.setDomainStepMode(XYStepMode.INCREMENT_BY_VAL);
         dynamicPlot.setDomainStepValue(5);
 
-        dynamicPlot.setRangeStepMode(XYStepMode.INCREMENT_BY_VAL);
-        dynamicPlot.setRangeStepValue(channelSize);
+        dynamicPlot.setRangeStepValue(channelSize + 2);
+        dynamicPlot.setTicksPerRangeLabel(1);
 
         dynamicPlot.setRangeValueFormat(new DecimalFormat("###.#"));
 
         // uncomment this line to freeze the range boundaries:
-        dynamicPlot.setRangeBoundaries(-100, 100, BoundaryMode.FIXED);
+        dynamicPlot.setRangeBoundaries(-1 * separateChannelsRange,
+                separateChannelsRange * channelSize,
+                BoundaryMode.FIXED);
 
         // create a dash effect for domain and range grid lines:
         DashPathEffect dashFx = new DashPathEffect(
                 new float[] {PixelUtils.dpToPix(3), PixelUtils.dpToPix(3)}, 0);
         dynamicPlot.getGraphWidget().getDomainGridLinePaint().setPathEffect(dashFx);
         dynamicPlot.getGraphWidget().getRangeGridLinePaint().setPathEffect(dashFx);
+
+        dynamicPlot.setRangeValueFormat(new Format() {
+            @Override
+            public StringBuffer format(Object object, StringBuffer buffer, FieldPosition field) {
+                int parsedInt =
+                        Math.round(Float.parseFloat(object.toString())/separateChannelsRange) + 1;
+                String labelString = channelName[parsedInt];
+                buffer.append(labelString);
+                return buffer;
+            }
+
+            @Override
+            public Object parseObject(String string, ParsePosition position) {
+                return java.util.Arrays.asList(channelName).indexOf(string);
+            }
+        });
 
     }
 
